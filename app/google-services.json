@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "403103613933",
+    "project_id": "elrinconcitoapp-a6cbd",
+    "storage_bucket": "elrinconcitoapp-a6cbd.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:403103613933:android:b03a255c5183915ac25de4",
+        "android_client_info": {
+          "package_name": "com.cequea.elrinconcitodaluz"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnWOMbXjDrp2afgiedJ_ML9UYihXyHsOk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
