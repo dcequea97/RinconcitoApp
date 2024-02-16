@@ -62,7 +62,7 @@ fun SearchCard(
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
             ),
-            trailingIcon = {
+            leadingIcon = {
                 IconButton(
                     onClick = { }
                 ) {

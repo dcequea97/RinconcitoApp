@@ -6,6 +6,7 @@ plugins {
     id("kotlin-parcelize")
 
     id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 android {
@@ -35,19 +36,25 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
+
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
     buildFeatures {
+        buildConfig = true
         compose = true
     }
+
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.3"
     }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -92,6 +99,15 @@ dependencies {
     // Import the Firebase BoM
     implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
 
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-analytics-ktx")
+    implementation("com.google.firebase:firebase-crashlytics-ktx")
+
+    //Coil
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
+    //Horizontal pager indicator
+    implementation("com.google.accompanist:accompanist-pager-indicators:0.30.1")
 
     implementation("androidx.core:core-ktx:1.9.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")

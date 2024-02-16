@@ -1,46 +1,34 @@
-package com.cequea.elrinconcitodaluz.ui.screens.debts
+package com.cequea.elrinconcitodaluz.ui.screens.debts.screens
 
 import android.content.res.Configuration
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.cequea.elrinconcitodaluz.R
@@ -51,23 +39,38 @@ import com.cequea.elrinconcitodaluz.domain.model.Debt
 import com.cequea.elrinconcitodaluz.domain.model.ProductDebt
 import com.cequea.elrinconcitodaluz.ui.common.SearchCard
 import com.cequea.elrinconcitodaluz.ui.navigation.AppScreens
+import com.cequea.elrinconcitodaluz.ui.screens.debts.DebtsEvents
+import com.cequea.elrinconcitodaluz.ui.screens.debts.DebtsViewModel
 import com.cequea.elrinconcitodaluz.ui.theme.AppTheme
 import java.time.LocalDateTime
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun DebtsScreen(
     viewModel: DebtsViewModel = hiltViewModel(),
     navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val pullRefreshState = rememberPullRefreshState(isLoading, { viewModel.getAllDebts() })
 
-    DebtsContent(
-        modifier = Modifier,
-        queryValue = uiState.searchBarText,
-        debts = uiState.debts,
-        onEvent = viewModel::onEvent,
-        onNavigateToSalesScreenClicked = { navController.navigate(AppScreens.AddSaleScreen.route) }
-    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pullRefresh(pullRefreshState)
+    ) {
+        DebtsContent(
+            modifier = Modifier,
+            queryValue = uiState.searchBarText,
+            debts = uiState.debts,
+            onEvent = viewModel::onEvent,
+            onSeeDetailsClicked = { navController.navigate(AppScreens.DebtDetailScreen.route) },
+            onNavigateToSalesScreenClicked = { navController.navigate(AppScreens.AddSaleScreen.route) }
+        )
+
+        PullRefreshIndicator(isLoading, pullRefreshState, Modifier.align(Alignment.TopCenter))
+    }
 }
 
 @Composable
@@ -76,127 +79,114 @@ fun DebtsContent(
     queryValue: String,
     debts: List<Debt>,
     onEvent: (DebtsEvents) -> Unit,
+    onSeeDetailsClicked: (Debt) -> Unit,
     onNavigateToSalesScreenClicked: () -> Unit
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
+    Column {
+        Spacer(modifier = Modifier.height(LocalSpacing.current.medium))
+        SearchCard(
+            onValueChange = { onEvent(DebtsEvents.OnQueryChanged(it)) },
+            value = queryValue,
+            placeholderText = stringResource(id = R.string.search_bar_text)
+        )
 
-    ) {
-        Column {
-            SearchCard(
-                onValueChange = { onEvent(DebtsEvents.OnQueryChanged(it)) },
-                value = queryValue,
-                placeholderText = stringResource(id = R.string.search_bar_text)
-            )
+        Spacer(modifier = Modifier.height(LocalSpacing.current.medium))
 
-            LazyColumn {
+        BoxWithConstraints {
+            LazyColumn(modifier = Modifier.height(maxHeight)) {
                 items(debts.size) { index ->
-                    DebtItem(
+                    DebtNewItem(
                         debt = debts[index],
-                        onEvent = { onEvent(DebtsEvents.OnDebtClicked(it)) }
+                        onSeeDetailsClicked = { debt ->
+                            onEvent(DebtsEvents.OnDebtClicked(debt))
+                            onSeeDetailsClicked(debt)
+                        }
                     )
                 }
             }
-        }
-
-        FloatingActionButton(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(
-                    bottom = LocalSpacing.current.large,
-                    end = LocalSpacing.current.large
-                ),
-            onClick = onNavigateToSalesScreenClicked
-        ) {
-            Icon(Icons.Filled.Add, "Add")
         }
     }
 }
 
 @Composable
-fun DebtItem(debt: Debt, onEvent: (String) -> Unit) {
-    var showDetail = remember { mutableStateOf(true) }
-
-    Column(
-        modifier = Modifier
+fun DebtNewItem(
+    modifier: Modifier = Modifier,
+    debt: Debt,
+    onSeeDetailsClicked: (Debt) -> Unit
+) {
+    Row(
+        modifier = modifier
             .fillMaxWidth()
-            .wrapContentHeight()
-            .padding(
-                top = LocalSpacing.current.medium
-            )
-            .clickable { showDetail.value = !showDetail.value }
+            .padding(LocalSpacing.current.small),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(
-                    start = LocalSpacing.current.large,
-                    end = LocalSpacing.current.large,
-                ),
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier.weight(0.7f)
         ) {
-            Row(
-                horizontalArrangement = Arrangement.Start,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(color = MaterialTheme.colorScheme.secondary)
-                ) {
-                    Text(
-                        modifier = Modifier.align(Alignment.Center),
-                        text = debt.personName.take(1)
-                    )
-                }
-
-                Column {
-                    Text(
-                        modifier = Modifier.padding(start = LocalSpacing.current.medium),
-                        text = debt.personName,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    Text(
-                        modifier = Modifier.padding(start = LocalSpacing.current.medium),
-                        text = debt.getListOfProducts(),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
+            Text(
+                modifier = Modifier.padding(start = LocalSpacing.current.medium),
+                text = "${debt.personName}: ${debt.getListOfProducts()}",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.W600
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
 
             Text(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .align(Alignment.CenterVertically),
-                text = debt.getTotalAmount().getBalancedFormatted(),
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = LocalColor.current.income
+                modifier = Modifier.padding(start = LocalSpacing.current.medium),
+                text = debt.amount.getBalancedFormatted(),
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.W400
                 )
             )
         }
 
-        AnimatedVisibility(
-            modifier = Modifier.padding(horizontal = LocalSpacing.current.large),
-            visible = showDetail.value,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
+        Button(
+            modifier = Modifier.weight(0.3f),
+            onClick = { onSeeDetailsClicked(debt) }
         ) {
-            DebtDetail(
-                debt = debt,
-                onEvent = onEvent
-            )
+            Text(text = stringResource(id = R.string.see_debt_details))
         }
+    }
+}
 
-        Divider(
-            modifier = Modifier.padding(top = LocalSpacing.current.medium),
-            thickness = 1.dp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+@Composable
+@Preview(showBackground = true)
+fun DebtNewItemPreview() {
+    AppTheme {
+        DebtNewItem(
+            debt = Debt(
+                id = "1",
+                personName = "Juan",
+                products = listOf(
+                    ProductDebt(
+                        id = "1",
+                        name = "Nutella",
+                        price = 10.0,
+                        quantity = 1,
+                        total = 10.0,
+                        purchasePrice = 2.00
+                    ),
+                    ProductDebt(
+                        id = "2",
+                        name = "Pringles",
+                        price = 2.5,
+                        quantity = 3,
+                        total = 10.0,
+                        purchasePrice = 2.00
+                    ),
+                ),
+                date = LocalDateTime.now(),
+                isPaid = false,
+                amount = 3.0
+            ),
+            onSeeDetailsClicked = {}
         )
     }
-
 }
+
 
 @Composable
 fun DebtDetail(debt: Debt, onEvent: (String) -> Unit) {
@@ -250,37 +240,6 @@ fun DebtDetail(debt: Debt, onEvent: (String) -> Unit) {
     }
 }
 
-@Composable
-@Preview(showBackground = true)
-fun DebtItemPreview() {
-    AppTheme {
-        DebtDetail(
-            debt = Debt(
-                id = "1",
-                personName = "Juan",
-                products = listOf(
-                    ProductDebt(
-                        id = "1",
-                        name = "Nutella",
-                        price = 10.0,
-                        quantity = 1
-                    ),
-                    ProductDebt(
-                        id = "2",
-                        name = "Pringles",
-                        price = 2.5,
-                        quantity = 3
-                    ),
-                ),
-                date = LocalDateTime.now(),
-                isPaid = false,
-                amount = 3.0
-            ),
-            onEvent = {}
-        )
-    }
-}
-
 val debtsPreview = listOf(
     Debt(
         id = "1",
@@ -290,13 +249,17 @@ val debtsPreview = listOf(
                 id = "1",
                 name = "Nutella",
                 price = 10.0,
-                quantity = 1
+                quantity = 1,
+                total = 10.0,
+                purchasePrice = 2.00
             ),
             ProductDebt(
                 id = "2",
                 name = "Pringles",
                 price = 2.5,
-                quantity = 3
+                quantity = 3,
+                total = 10.0,
+                purchasePrice = 2.00
             ),
         ),
         date = LocalDateTime.now(),
@@ -311,13 +274,17 @@ val debtsPreview = listOf(
                 id = "1",
                 name = "Nutella",
                 price = 10.0,
-                quantity = 1
+                quantity = 1,
+                total = 10.0,
+                purchasePrice = 2.00
             ),
             ProductDebt(
                 id = "2",
                 name = "Pringles",
                 price = 2.5,
-                quantity = 3
+                quantity = 3,
+                total = 10.0,
+                purchasePrice = 2.00
             ),
         ),
         date = LocalDateTime.now(),
@@ -332,13 +299,17 @@ val debtsPreview = listOf(
                 id = "1",
                 name = "Nutella",
                 price = 10.0,
-                quantity = 1
+                quantity = 1,
+                total = 10.0,
+                purchasePrice = 2.00
             ),
             ProductDebt(
                 id = "2",
                 name = "Pringles",
                 price = 2.5,
-                quantity = 3
+                quantity = 3,
+                total = 10.0,
+                purchasePrice = 2.00
             ),
         ),
         date = LocalDateTime.now(),
@@ -354,7 +325,8 @@ fun DebtsContentPreview() {
         DebtsContent(
             queryValue = "",
             debts = debtsPreview,
-            onEvent = {}
+            onEvent = {},
+            onSeeDetailsClicked = { }
         ) { }
     }
 }
@@ -366,7 +338,8 @@ fun DebtsContentDarkPreview() {
         DebtsContent(
             queryValue = "",
             debts = debtsPreview,
-            onEvent = {}
-        ) {  }
+            onEvent = {},
+            onSeeDetailsClicked = { }
+        ) { }
     }
 }

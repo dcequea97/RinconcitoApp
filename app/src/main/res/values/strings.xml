@@ -4,4 +4,18 @@
     <string name="search_bar_text">Busqueda</string>
     <string name="paid_text">Pagado</string>
     <string name="add_debt">Agregar</string>
+
+    <string name="see_debt_details">Detalle</string>
+
+    <!--  Tittles  -->
+    <string name="debts_tittle">Deudas</string>
+    <string name="debts_detail_tittle">Detalle de Deuda</string>
+    <string name="register_sale_tittle">Registrar Venta</string>
+    <string name="sales_history_tittle">Historico</string>
+    <string name="sale_detail_tittle">Detalle de venta</string>
+    <string name="inventory_tittle">Inventario</string>
+    <string name="product_detail_tittle">Producto</string>
+    <string name="home_tittle">Resumen</string>
+
+
 </resources>
